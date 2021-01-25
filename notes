@@ -1,0 +1,30 @@
+Passport login tutorial
+	- https://www.youtube.com/watch?v=-RCnNyD0L-s
+	- code: https://github.com/WebDevSimplified/Nodejs-Passport-Login
+
+User Auth tutorial
+	- https://www.youtube.com/watch?v=Ud5xKCYQTjM
+
+Serialize/Deserialize in passport:
+	- https://stackoverflow.com/questions/26168492/what-exactly-does-serialize-and-deseralize-do-in-sessions-with-passport-and-expr
+
+bcrypt:
+	- https://www.npmjs.com/package/bcrypt
+
+passport.js docs:
+	- http://www.passportjs.org/docs/configure/
+
+passport-local:
+	- https://github.com/jaredhanson/passport-local
+
+express docs:
+	- https://expressjs.com/en/4x/api.html
+
+
+Audio recording tutorials:
+
+- https://medium.com/@bryanjenningz/how-to-record-and-play-audio-in-javascript-faa1b2b3e49b
+
+- https://developer.mozilla.org/en-US/docs/Web/API/MediaStream_Recording_API/Using_the_MediaStream_Recording_API
+
+- https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder

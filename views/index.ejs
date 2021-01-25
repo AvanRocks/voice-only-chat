@@ -1,0 +1,35 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>Chat app</title>
+		<meta charset="utf-8">
+		<script src="/socket.io/socket.io.js"></script>
+		<script src="js/index.js" async></script>
+		<link href="css/style.css" rel="stylesheet" type="text/css">
+	</head>
+	<body>
+		<ul id="recordings">
+		</ul>
+
+		</div>
+		<div id="status">
+		</div>
+		<button id="record">Record</button>
+
+		<br>
+		<br>
+		<br>
+
+		<form action="/addFriend" method="POST" id="friendForm">
+			<div id="errorDiv"></div>
+			<input type="text" name="friendName" id="friendInput" required>
+			<button type="submit" id="friendBtn">Add friend</button>
+		</form>
+
+		<br>
+		<form action="/logout?_method=DELETE" method="POST">
+			<button type="submit">Log out</button>
+		</form>
+
+	</body>
+</html>
