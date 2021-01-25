@@ -21,17 +21,15 @@ if (process.env.NODE_ENV === 'production') {
 	config = {
 		connectionString: process.env.DATABASE_URL + '?sslmode=require',
 		ssl: {
-			addUser = 'INSERT INTO accounts (username,password) VALUES ($1,$2);'
-					pool.query(addUser, [req.body.username, hash], (err, res) => {
-						if (err) { throw err } 
-					})
-				})
-				res.redirect('/login')
-			}
-		})
-		.catch(e => {
-			throw e
-		})
+})
+
+app.get('/', (req, res) => {
+})
+
+app.get('/login', (req, res) => {
+})
+
+app.post('/login', (req, res) => {
 })
 
 app.delete('/logout', (req, res) => {

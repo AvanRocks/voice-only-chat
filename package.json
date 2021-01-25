@@ -6,7 +6,7 @@
   "author": "",
   "license": "GPL",
   "scripts": {
-    "devStart": "nodemon app.js"
+    "devStart": "nodemon new-app.js"
   },
   "dependencies": {
     "bcrypt": "^5.0.0",
