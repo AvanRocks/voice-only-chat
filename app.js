@@ -16,20 +16,87 @@ const pgSession = require('connect-pg-simple')(session)
 const multer = require('multer')
 const upload = multer()
 
-var config = {};
+const initializePassport = require('./passport-config')
+initializePassport(
+  passport,
+	getUserByUsername,
+	getUserById
+)
+
+var config = {}
 if (process.env.NODE_ENV === 'production') {
 	config = {
 		connectionString: process.env.DATABASE_URL + '?sslmode=require',
 		ssl: {
+			rejectUnauthorized: false
+		}
+	}
+}
+const pool = new Pool(config)
+
+var sess = {
+	store: new pgSession({
+		pool: pool,
+	}),
+	secret: process.env.SESSION_SECRET,
+	resave: false,
+	saveUninitialized: false,
+	cookie: {
+		maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+		sameSite: 'strict'
+	}
+}
+if (process.env.NODE_ENV === 'production') {
+	sess.cookie.secure = true
+}
+
+app.set('view-engine', 'ejs')
+app.use(express.urlencoded({ extended: false }))
+app.use(flash())
+app.use(session(sess))
+app.use(passport.initialize())
+app.use(passport.session())
+app.use(methodOverride('_method'))
+app.use(express.static('public'))
+
+app.get('/', checkAuthenticated, (req, res) => {
+	res.render('index.ejs');
 })
 
-app.get('/', (req, res) => {
+app.get('/login', checkNotAuthenticated, (req, res) => {
+	res.render('login.ejs');
 })
 
-app.get('/login', (req, res) => {
+app.post('/login', checkNotAuthenticated, passport.authenticate('local', {
+	  successRedirect: '/',
+	  failureRedirect: '/login',
+	  failureFlash: true
+}))
+
+app.get('/register', checkNotAuthenticated, (req, res) => {
+	  res.render('register.ejs')
 })
 
-app.post('/login', (req, res) => {
+app.post('/register', checkNotAuthenticated, async (req, res) => {
+  try {
+		getUserByUsername(req.body.username)
+		.then(async result => {
+			if (result.rows.length > 0) {
+				req.flash('error', 'Username not available')
+				res.render('register.ejs')
+			} else {
+				const hashedPassword = await bcrypt.hash(req.body.password, 10)
+				pool.query('INSERT INTO accounts (username,password) VALUES ($1,$2);', [req.body.username, hashedPassword], (err, res2) => {
+					res.redirect('/login')
+				})
+			}
+		})
+		.catch(e => {
+			console.log('error querying database: ' + e)
+		})
+  } catch {
+    res.redirect('/register')
+  }
 })
 
 app.delete('/logout', (req, res) => {
@@ -87,4 +154,3 @@ io.on('connection', (socket) => {
 		socket.broadcast.emit('voice message', audioBlob)
 	})
 });
-
