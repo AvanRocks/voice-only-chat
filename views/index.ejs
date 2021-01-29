@@ -8,28 +8,42 @@
 		<link href="css/style.css" rel="stylesheet" type="text/css">
 	</head>
 	<body>
-		<ul id="recordings">
-		</ul>
-
+		<div class='logout'>
+			<p id='username'><%= username %></p>
+			<form action="/logout?_method=DELETE" method="POST">
+				<button type="submit">Log out</button>
+			</form>
 		</div>
-		<div id="status">
+
+		<div id="friendsDiv">
+			<ul id="friendList">
+			</ul>
 		</div>
-		<button id="record">Record</button>
+
+		<div id="friendReqDiv">
+			<ul id="friendReqList">
+			</ul>
+		</div>
+
+		<div class='chat'>
+			<div class='messages'>
+				<ul id="recordings">
+				</ul>
+			</div>
+			<div id="status">
+			</div>
+			<button id="record">Record</button>
+		</div>
+
+		<div class='addFriend'>
+			<form action="/addFriend" method="POST" id="friendForm">
+				<div id="errorDiv"></div>
+				<input type="text" name="friendName" id="friendInput" >
+				<button type="submit" id="friendBtn">Add friend</button>
+			</form>
+		</div>
 
 		<br>
-		<br>
-		<br>
-
-		<form action="/addFriend" method="POST" id="friendForm">
-			<div id="errorDiv"></div>
-			<input type="text" name="friendName" id="friendInput" required>
-			<button type="submit" id="friendBtn">Add friend</button>
-		</form>
-
-		<br>
-		<form action="/logout?_method=DELETE" method="POST">
-			<button type="submit">Log out</button>
-		</form>
 
 	</body>
 </html>

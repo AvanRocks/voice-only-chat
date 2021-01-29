@@ -7,6 +7,155 @@ if (!isSupported()) {
 
 	initRecording()
 	initAddFriend()
+	refreshFriendRequests()
+	refreshFriends()
+}
+
+function sendHttpReq(method, endpoint, responseType, data, callback) {
+	var xhttp = new XMLHttpRequest();
+	xhttp.open(method, endpoint);
+	xhttp.onreadystatechange = () => { 
+		if(xhttp.readyState === XMLHttpRequest.DONE) {
+			if (xhttp.status === 400) {
+				callback(xhttp.response, null)
+			} else {
+				callback(null, xhttp.response)
+			}
+		}
+	}
+	xhttp.responseType = responseType
+
+	if (data) 
+		xhttp.send(data);
+	else
+		xhttp.send()
+}
+
+function refreshFriends() {
+	const friendsDiv = document.getElementById('friendsDiv')
+	const friendList = document.getElementById('friendList')
+	const friendHeader = document.getElementById('friendHeader')
+
+	if (friendHeader) {
+		friendsDiv.removeChild(friendHeader)
+	}
+
+	while (friendList.firstChild) {
+		friendList.removeChild(friendList.lastChild);
+	}
+
+	sendHttpReq("GET", "/getFriends", 'json', null, (err, res) => {
+		if (err) console.log('error: '+err)
+		else {
+			let users = res
+			if (users.length) {
+				let newFriendHeader = document.createElement('h2')
+				newFriendHeader.textContent = 'Friends'
+				newFriendHeader.id = 'friendHeader'
+				friendsDiv.insertBefore(newFriendHeader, friendList)
+			}
+			for (let i=0;i<users.length;++i) {
+				let li = document.createElement('li')
+				let friendName = document.createElement('span')
+				friendName.textContent = users[i]
+
+				let deleteBtn = document.createElement('button')
+				deleteBtn.textContent = '✘'
+				deleteBtn.id = users[i]
+				deleteBtn.addEventListener('click', (event) => {
+					let data = new FormData();
+					data.append('friendName', event.target.id)
+					sendHttpReq('DELETE', '/removeFriend', 'text', data, () => {})
+
+					const friendList = document.getElementById('friendList')
+					let friendLi = event.target.parentNode
+					friendList.removeChild(friendLi)
+					if (friendList.children.length === 0) {
+						const friendDiv = document.getElementById('friendsDiv')
+						const friendHeader = document.getElementById('friendHeader')
+						friendDiv.removeChild(friendHeader)
+					}
+				})
+
+				li.appendChild(deleteBtn)
+				li.appendChild(friendName)
+				friendList.appendChild(li)
+			}
+		}
+	})
+}
+
+function refreshFriendRequests() {
+	const friendReqDiv = document.getElementById('friendReqDiv')
+	const friendReqList = document.getElementById('friendReqList')
+	const friendReqHeader = document.getElementById('friendReqHeader')
+
+	if (friendReqHeader) {
+		friendReqDiv.removeChild(friendReqHeader)
+	}
+
+	while (friendReqList.firstChild) {
+		friendReqList.removeChild(friendReqList.lastChild);
+	}
+
+	sendHttpReq("GET", "/getFriendRequests", 'json', null, (err, res) => {
+		if (err) console.log('error: '+err)
+		else {
+			let users = res
+
+			if (users.length) {
+				const friendReqDiv = document.getElementById('friendReqDiv')
+				let friendReqHeader = document.createElement('h2')
+				friendReqHeader.textContent = 'Friend Requests'
+				friendReqHeader.id = 'friendReqHeader'
+				friendReqDiv.insertBefore(friendReqHeader, friendReqList)
+			}
+
+			for (let i=0;i<users.length;++i) {
+				let li = document.createElement('li')
+				li.textContent = users[i]
+
+				let acceptBtn = document.createElement('button')
+				acceptBtn.textContent = '✓'
+				acceptBtn.id = users[i]
+				acceptBtn.addEventListener('click', acceptFriendRequest)
+				let rejectBtn = document.createElement('button')
+				rejectBtn.textContent = '✘'
+				rejectBtn.id = users[i]
+				rejectBtn.addEventListener('click', rejectFriendRequest)
+
+				li.appendChild(acceptBtn)
+				li.appendChild(rejectBtn)
+				friendReqList.appendChild(li)
+			}
+		}
+	})
+}
+
+function acceptFriendRequest(event) {
+	handleFriendRequest(event, 'accept')
+}
+
+function rejectFriendRequest(event) {
+	handleFriendRequest(event, 'reject')
+}
+
+function handleFriendRequest(event, action) {
+	/*
+	const friendReqList = document.getElementById('friendReqList')
+	let friendReqLi = event.target.parentNode
+	friendReqList.removeChild(friendReqLi)
+	if (friendReqList.children.length === 0) {
+		const friendReqDiv = document.getElementById('friendReqDiv')
+		const friendReqHeader = document.getElementById('friendReqHeader')
+		friendReqDiv.removeChild(friendReqHeader)
+	}
+	*/
+
+	let data = new FormData();
+	data.append('action', action)
+	data.append('friendName', event.target.id)
+	sendHttpReq('POST', '/handleFriendRequest', 'text', data, (err, res)=>{})
 }
 
 function initAddFriend() {
@@ -18,6 +167,7 @@ function initAddFriend() {
 		e.preventDefault()
 
 		let friendName = friendInput.value
+		friendInput.value = ''
 		if (!friendName) {
 			return
 		}
@@ -25,18 +175,13 @@ function initAddFriend() {
 		let data = new FormData();
 		data.append("friendName", friendName)
 
-		var xhttp= new XMLHttpRequest();
-		xhttp.open("POST", "/addFriend");
-		xhttp.onreadystatechange = () => { 
-			if(xhttp.readyState === XMLHttpRequest.DONE) {
-				if (xhttp.status === 400) {
-					errorDiv.textContent = xhttp.response
-				} else {
-					errorDiv.textContent = ''
-				}
+		sendHttpReq('POST', '/addFriend', 'text', data, (err, res) => {
+			if (err) {
+				errorDiv.textContent = err
+			} else {
+				errorDiv.textContent = ''
 			}
-		}
-		xhttp.send(data);
+		})
 	}
 }
 
@@ -96,6 +241,13 @@ function showMessage(audioChunks) {
 }
 
 function initSocket(socket) {
+	let username = document.getElementById('username').textContent
+	socket.emit('init', username)
+
+	socket.on('refreshFriends', () => refreshFriends())
+
+	socket.on('refreshFriendRequests', () => refreshFriendRequests())
+
 	socket.on('voice message', (audioBlob) => {
 		showMessage(audioBlob)
 	})

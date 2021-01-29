@@ -60,7 +60,7 @@ app.use(methodOverride('_method'))
 app.use(express.static('public'))
 
 app.get('/', checkAuthenticated, (req, res) => {
-	res.render('index.ejs');
+	res.render('index.ejs', { username : req.user.username } );
 })
 
 app.get('/login', checkNotAuthenticated, (req, res) => {
@@ -104,16 +104,36 @@ app.delete('/logout', (req, res) => {
 	res.redirect('/login')
 })
 
+app.get('/getFriends', checkAuthenticated, async (req, res) => {
+	let ret = []
+	let friends = req.user.friends
+	if (friends) {
+		for (let i=0;i<friends.length;++i) {
+			let result = await getUserById(friends[i])
+			let friend = result.rows[0]
+			ret.push(friend.username)
+		}
+	}
+
+	res.send(ret)
+})
+
 app.post('/addFriend', checkAuthenticated, upload.none(), (req, res) => {
 	getUserByUsername(req.body.friendName)
-	.then( result => {
+	.then( async result => {
 		if (result.rows.length === 0) {
 			res.status(400).send('No such user')
 		} else if (result.rows[0].username === req.user.username) {
 			res.status(400).send("You can't friend yourself")
+		} else if (req.user.friends && req.user.friends.includes(result.rows[0].id))  {
+			res.status(400).send("You are already friends with that user")
+		} else if (req.user['friend requests'] && req.user['friend requests'].includes(result.rows[0].id))  {
+			res.status(400).send("You have already sent a friend request to that user")
 		} else {
-			// add friend to database
-			console.log(result)
+			let newFriend = result.rows[0]
+			await pool.query('UPDATE accounts SET "friend requests" = array_append("friend requests", $1) where id = $2', [req.user.id, newFriend.id])
+
+			io.to(newFriend.id).emit('refreshFriendRequests')
 
 			res.sendStatus(200)
 		}
@@ -121,6 +141,52 @@ app.post('/addFriend', checkAuthenticated, upload.none(), (req, res) => {
 	.catch( e => {
 		console.log(e)
 	})
+})
+
+app.delete('/removeFriend', checkAuthenticated, upload.none(), (req, res) => {
+	getUserByUsername(req.body.friendName).then( async result => {
+		let friend = result.rows[0]
+		
+		await pool.query('UPDATE accounts SET "friends" = array_remove("friends", $1) where id = $2', [friend.id, req.user.id]);
+		await pool.query('UPDATE accounts SET "friends" = array_remove("friends", $1) where id = $2', [req.user.id, friend.id]);
+
+		io.to(req.user.id).to(friend.id).emit('refreshFriends')
+		res.sendStatus(200)
+	}).catch(e =>  res.sendStatus(400))
+})
+
+
+app.get('/getFriendRequests', checkAuthenticated, async (req, res) => {
+	let ret = []
+	let friendReq = req.user['friend requests']
+	if (friendReq) {
+		for (let i=0;i<friendReq.length;++i) {
+			let result = await getUserById(friendReq[i])
+			let friend = result.rows[0]
+			ret.push(friend.username)
+		}
+	}
+
+	res.send(ret)
+})
+
+app.post('/handleFriendRequest', checkAuthenticated, upload.none(), (req, res) => {
+	getUserByUsername(req.body.friendName).then(async result => {
+		let friend = result.rows[0]
+		if (req.body.action === 'accept') {
+			await pool.query('UPDATE accounts SET "friend requests" = array_remove("friend requests", $1) where id = $2', [friend.id, req.user.id])
+			await pool.query('UPDATE accounts SET "friends" = array_append("friends", $1) where id = $2', [req.user.id, friend.id])
+			await pool.query('UPDATE accounts SET "friends" = array_append("friends", $1) where id = $2', [friend.id, req.user.id])
+			io.to(req.user.id).to(friend.id).emit('refreshFriends')
+			io.to(req.user.id).emit('refreshFriendRequests')
+		} else if (req.body.action === 'reject') {
+			await pool.query('UPDATE accounts SET "friend requests" = array_remove("friend requests", $1) where id = $2', 
+				[friend.id, req.user.id])
+			io.to(req.user.id).emit('refreshFriendRequests')
+		}
+	})
+
+	res.send()
 })
 
 function checkAuthenticated(req, res, next) {
@@ -153,4 +219,11 @@ io.on('connection', (socket) => {
 	socket.on('voice message', (audioBlob) => {
 		socket.broadcast.emit('voice message', audioBlob)
 	})
-});
+
+	socket.on('init', (username) => {
+		getUserByUsername(username).then(res => {
+			let userId = res.rows[0].id
+			socket.join(userId)
+		}).catch(err => console.log('database error: ' + err))
+	})
+})
