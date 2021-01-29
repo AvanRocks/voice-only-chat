@@ -100,22 +100,26 @@ app.post('/register', checkNotAuthenticated, async (req, res) => {
 })
 
 app.delete('/logout', (req, res) => {
+	io.to(req.user.id).emit('logOut')
 	req.logOut()
 	res.redirect('/login')
 })
 
 app.get('/getFriends', checkAuthenticated, async (req, res) => {
-	let ret = []
+	let names = []
 	let friends = req.user.friends
 	if (friends) {
 		for (let i=0;i<friends.length;++i) {
 			let result = await getUserById(friends[i])
 			let friend = result.rows[0]
-			ret.push(friend.username)
+			names.push(friend.username)
 		}
 	}
 
-	res.send(ret)
+	res.send({
+		names: names,
+		id: req.user.friends
+	})
 })
 
 app.post('/addFriend', checkAuthenticated, upload.none(), (req, res) => {
@@ -144,7 +148,7 @@ app.post('/addFriend', checkAuthenticated, upload.none(), (req, res) => {
 })
 
 app.delete('/removeFriend', checkAuthenticated, upload.none(), (req, res) => {
-	getUserByUsername(req.body.friendName).then( async result => {
+	getUserById(req.body.friendId).then( async result => {
 		let friend = result.rows[0]
 		
 		await pool.query('UPDATE accounts SET "friends" = array_remove("friends", $1) where id = $2', [friend.id, req.user.id]);
@@ -157,21 +161,24 @@ app.delete('/removeFriend', checkAuthenticated, upload.none(), (req, res) => {
 
 
 app.get('/getFriendRequests', checkAuthenticated, async (req, res) => {
-	let ret = []
+	let names = []
 	let friendReq = req.user['friend requests']
 	if (friendReq) {
 		for (let i=0;i<friendReq.length;++i) {
 			let result = await getUserById(friendReq[i])
 			let friend = result.rows[0]
-			ret.push(friend.username)
+			names.push(friend.username)
 		}
 	}
 
-	res.send(ret)
+	res.send({
+		names: names,
+		id: req.user['friend requests']
+	})
 })
 
 app.post('/handleFriendRequest', checkAuthenticated, upload.none(), (req, res) => {
-	getUserByUsername(req.body.friendName).then(async result => {
+	getUserById(req.body.friendName).then(async result => {
 		let friend = result.rows[0]
 		if (req.body.action === 'accept') {
 			await pool.query('UPDATE accounts SET "friend requests" = array_remove("friend requests", $1) where id = $2', [friend.id, req.user.id])
@@ -216,8 +223,9 @@ http.listen(8000, () => {
 })
 
 io.on('connection', (socket) => {
-	socket.on('voice message', (audioBlob) => {
-		socket.broadcast.emit('voice message', audioBlob)
+	socket.on('voice message', (audioChunks, selectedId) => {
+		//socket.broadcast.emit('voice message', audioChunks)
+		socket.to(selectedId).emit('voice message', audioChunks)
 	})
 
 	socket.on('init', (username) => {

@@ -46,3 +46,7 @@ p#username {
 body {
 	margin: 2% 2% 2% 2%;
 }
+
+li {
+	background: aqua;
+}

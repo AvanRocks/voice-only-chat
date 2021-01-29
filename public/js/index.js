@@ -1,3 +1,5 @@
+var selectedId = -1
+
 if (!isSupported()) {
 	alert('Your browser does not support getUserMedia')
 } else {
@@ -47,34 +49,36 @@ function refreshFriends() {
 	sendHttpReq("GET", "/getFriends", 'json', null, (err, res) => {
 		if (err) console.log('error: '+err)
 		else {
-			let users = res
-			if (users.length) {
+			let names = res.names
+			let id = res.id
+			if (names.length) {
 				let newFriendHeader = document.createElement('h2')
 				newFriendHeader.textContent = 'Friends'
 				newFriendHeader.id = 'friendHeader'
 				friendsDiv.insertBefore(newFriendHeader, friendList)
 			}
-			for (let i=0;i<users.length;++i) {
+			for (let i=0;i<names.length;++i) {
+				if (i === 0 && selectedId === -1) {
+					selectedId = id[i]
+				}
+
 				let li = document.createElement('li')
+				li.id = id[i]
+
+				li.addEventListener('click', (event) => {
+					selectedId = Number(event.target.id)
+				})
+
 				let friendName = document.createElement('span')
-				friendName.textContent = users[i]
+				friendName.textContent = names[i]
 
 				let deleteBtn = document.createElement('button')
 				deleteBtn.textContent = '✘'
-				deleteBtn.id = users[i]
+				deleteBtn.id = id[i]
 				deleteBtn.addEventListener('click', (event) => {
 					let data = new FormData();
-					data.append('friendName', event.target.id)
+					data.append('friendId', event.target.id)
 					sendHttpReq('DELETE', '/removeFriend', 'text', data, () => {})
-
-					const friendList = document.getElementById('friendList')
-					let friendLi = event.target.parentNode
-					friendList.removeChild(friendLi)
-					if (friendList.children.length === 0) {
-						const friendDiv = document.getElementById('friendsDiv')
-						const friendHeader = document.getElementById('friendHeader')
-						friendDiv.removeChild(friendHeader)
-					}
 				})
 
 				li.appendChild(deleteBtn)
@@ -101,9 +105,10 @@ function refreshFriendRequests() {
 	sendHttpReq("GET", "/getFriendRequests", 'json', null, (err, res) => {
 		if (err) console.log('error: '+err)
 		else {
-			let users = res
+			let names = res.names
+			let id = res.id
 
-			if (users.length) {
+			if (names.length) {
 				const friendReqDiv = document.getElementById('friendReqDiv')
 				let friendReqHeader = document.createElement('h2')
 				friendReqHeader.textContent = 'Friend Requests'
@@ -111,17 +116,17 @@ function refreshFriendRequests() {
 				friendReqDiv.insertBefore(friendReqHeader, friendReqList)
 			}
 
-			for (let i=0;i<users.length;++i) {
+			for (let i=0;i<names.length;++i) {
 				let li = document.createElement('li')
-				li.textContent = users[i]
+				li.textContent = names[i]
 
 				let acceptBtn = document.createElement('button')
 				acceptBtn.textContent = '✓'
-				acceptBtn.id = users[i]
+				acceptBtn.id = id[i]
 				acceptBtn.addEventListener('click', acceptFriendRequest)
 				let rejectBtn = document.createElement('button')
 				rejectBtn.textContent = '✘'
-				rejectBtn.id = users[i]
+				rejectBtn.id = id[i]
 				rejectBtn.addEventListener('click', rejectFriendRequest)
 
 				li.appendChild(acceptBtn)
@@ -141,17 +146,6 @@ function rejectFriendRequest(event) {
 }
 
 function handleFriendRequest(event, action) {
-	/*
-	const friendReqList = document.getElementById('friendReqList')
-	let friendReqLi = event.target.parentNode
-	friendReqList.removeChild(friendReqLi)
-	if (friendReqList.children.length === 0) {
-		const friendReqDiv = document.getElementById('friendReqDiv')
-		const friendReqHeader = document.getElementById('friendReqHeader')
-		friendReqDiv.removeChild(friendReqHeader)
-	}
-	*/
-
 	let data = new FormData();
 	data.append('action', action)
 	data.append('friendName', event.target.id)
@@ -218,7 +212,8 @@ async function initRecording() {
 }
 
 function sendAudio(audioChunks) {
-	socket.emit('voice message', audioChunks)
+	console.log(selectedId)
+	socket.emit('voice message', audioChunks, selectedId)
 }
 
 function handleAudio(audioChunks) {
@@ -248,8 +243,13 @@ function initSocket(socket) {
 
 	socket.on('refreshFriendRequests', () => refreshFriendRequests())
 
-	socket.on('voice message', (audioBlob) => {
-		showMessage(audioBlob)
+	socket.on('voice message', (audioChunks) => {
+		showMessage(audioChunks)
+	})
+	
+	socket.on('logOut', () => {
+		window.location.replace(window.location.href+'login')
+		//window.location.reload()
 	})
 }
 
