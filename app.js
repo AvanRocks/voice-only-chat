@@ -49,7 +49,7 @@ var sess = {
 	}
 }
 if (process.env.NODE_ENV === 'production') {
-	sess.cookie.secure = true
+	//sess.cookie.secure = true
 }
 
 app.set('view-engine', 'ejs')
