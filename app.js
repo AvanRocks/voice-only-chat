@@ -16,6 +16,8 @@ const pgSession = require('connect-pg-simple')(session)
 const multer = require('multer')
 const upload = multer()
 
+const port = process.env.PORT || 8000
+
 const initializePassport = require('./passport-config')
 initializePassport(
   passport,
@@ -218,8 +220,8 @@ function getUserById(id) {
 	return pool.query('SELECT * FROM accounts WHERE id = $1', [id])
 }
 
-http.listen(8000, () => {
-	console.log(`Listening on port 8000 ...`)
+http.listen(port, () => {
+	console.log(`Listening on port ${port} ...`)
 })
 
 io.on('connection', (socket) => {
