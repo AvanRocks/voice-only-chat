@@ -36,6 +36,10 @@ p#username {
 	height: 20px;
 }
 
+.selected {
+	background: aqua;
+}
+
 li.right {
 	text-align: right;
 }
@@ -49,5 +53,4 @@ body {
 }
 
 li {
-	background: aqua;
 }
