@@ -24,23 +24,24 @@ p#username {
 .chat {
 	position: relative;
 	margin: 7% auto 2% auto;
-	height: 50%;
-}
-
-.messages {
+	height: 40%;
 	overflow-y: auto;
 }
 
-#record {
-
+.utils {
+	margin-bottom: 10px;
 }
 
 #status {
-	position: absolute;
-	bottom: 0;
+	height: 20px;
 }
 
-.addFriend {
+li.right {
+	text-align: right;
+}
+
+li.left {
+	text-align: left;
 }
 
 body {

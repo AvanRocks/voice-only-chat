@@ -212,16 +212,15 @@ async function initRecording() {
 }
 
 function sendAudio(audioChunks) {
-	console.log(selectedId)
 	socket.emit('voice message', audioChunks, selectedId)
 }
 
 function handleAudio(audioChunks) {
 	sendAudio(audioChunks)
-	showMessage(audioChunks)
+	showMessage(audioChunks, true)
 }
 
-function showMessage(audioChunks) {
+function showMessage(audioChunks, mine) {
 	const audioBlob = new Blob(audioChunks);
 	const recordingList = document.getElementById('recordings')
 	const audioUrl = URL.createObjectURL(audioBlob);
@@ -230,6 +229,8 @@ function showMessage(audioChunks) {
 	let audio = document.createElement('audio')
 	audio.setAttribute('controls', '')
 	audio.src = audioUrl
+	if (mine) li.classList.add('right')
+	else li.classList.add('left')
 
 	li.appendChild(audio)
 	recordingList.appendChild(li)
@@ -244,7 +245,7 @@ function initSocket(socket) {
 	socket.on('refreshFriendRequests', () => refreshFriendRequests())
 
 	socket.on('voice message', (audioChunks) => {
-		showMessage(audioChunks)
+		showMessage(audioChunks, false)
 	})
 	
 	socket.on('logOut', () => {
