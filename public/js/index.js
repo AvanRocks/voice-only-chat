@@ -66,12 +66,16 @@ function refreshFriends() {
 				li.id = id[i]
 
 				li.addEventListener('click', (event) => {
-					selectedId = Number(event.target.id)
-					let friends = event.target.parentNode.childNodes
+					let friend
+					if (event.target.tagName === 'SPAN') friend = event.target.parentNode
+					else friend = event.target
+
+					selectedId = Number(friend.id)
+					let friends = friend.parentNode.childNodes
 					for (let i=0;i<friends.length;++i) {
 						friends[i].classList.remove('selected')
 					}
-					event.target.classList.add('selected')
+					friend.classList.add('selected')
 				})
 
 				let friendName = document.createElement('span')
